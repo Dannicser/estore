@@ -1,6 +1,7 @@
 {
   "name": "e-store",
   "version": "0.0.1",
+  "homepage": "https://dannicser.github.io/estore/",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
