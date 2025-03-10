@@ -6,7 +6,7 @@ export default defineConfig({
   base: process.env.NODE_ENV === 'production' ? '/e-store/' : '/e-store', // Указываем базовый путь
   build: {
     outDir: 'dist', // Папка для сборки
-    assetsDir: 'assets', // Папка для статических файлов (CSS, изображения и т.д.)
+    assetsDir: '/e-store/assets', // Папка для статических файлов (CSS, изображения и т.д.)
     emptyOutDir: true // Очищать папку перед сборкой
   }
 })
