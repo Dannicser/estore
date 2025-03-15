@@ -1,5 +1,5 @@
 <script setup>
-import { ref, provide, watch, computed } from 'vue'
+import { ref, provide, watch, computed, inject, onMounted } from 'vue'
 
 import Header from './components/Header.vue'
 import Drawer from './components/Drawer.vue'
@@ -21,30 +21,19 @@ const openDrawer = () => {
   document.documentElement.style.overflow = 'hidden';
 }
 
-const addToCart = (item) => {
-  cart.value.push(item)
-  item.isAdded = true
+const toggleAddToCart = (item) => {
+  if (item.isAdded) {
+    item.isAdded = false
+  } else {
+    item.isAdded = true
+  }
 }
 
-const removeFromCart = (item) => {
-  cart.value.splice(cart.value.indexOf(item), 1)
-  item.isAdded = false
-}
-
-watch(
-  cart,
-  () => {
-    localStorage.setItem('cart', JSON.stringify(cart.value))
-  },
-  { deep: true }
-)
-
-provide('cart', {
+provide('app', {
   cart,
   closeDrawer,
   openDrawer,
-  addToCart,
-  removeFromCart
+  toggleAddToCart
 })
 
 /* Корзина (END) */

@@ -1,138 +1,83 @@
 <script setup>
-import { reactive, watch, ref, onMounted } from 'vue'
-import axios from 'axios'
-import debounce from 'lodash.debounce'
-import { inject } from 'vue'
-import CardList from '../components/CardList.vue'
+import { reactive, watch, ref, onMounted, computed } from 'vue';
+import axios from 'axios';
+import debounce from 'lodash.debounce';
+import { inject } from 'vue';
+import CardList from '../components/CardList.vue';
 
-const { cart, addToCart, removeFromCart } = inject('cart')
+const { cart, toggleAddToCart } = inject('app');
 
-const items = ref([])
+const items = ref([]);
+const isInit = ref(false);
 
 const filters = reactive({
   sortBy: 'title',
-  searchQuery: ''
-})
+  searchQuery: '',
+});
 
-const onClickAddPlus = (item) => {
-  if (!item.isAdded) {
-    addToCart(item)
-  } else {
-    removeFromCart(item)
-  }
-}
-
-const onChangeSelect = (event) => {
-  filters.sortBy = event.target.value
-}
-
-const onChangeSearchInput = debounce((event) => {
-  filters.searchQuery = event.target.value
-}, 300)
-
-const addToFavorite = async (item) => {
-  try {
-    if (!item.isFavorite) {
-      const obj = {
-        item_id: item.id
-      }
-
-      item.isFavorite = true
-
-      const { data } = await axios.post(`https://604781a0efa572c1.mokky.dev/favorites`, obj)
-
-      item.favoriteId = data.id
-    } else {
-      item.isFavorite = false
-      await axios.delete(`https://604781a0efa572c1.mokky.dev/favorites/${item.favoriteId}`)
-      item.favoriteId = null
-    }
-  } catch (err) {
-    console.log(err)
-  }
-}
-
-const fetchFavorites = async () => {
-  try {
-    const { data: favorites } = await axios.get(`https://604781a0efa572c1.mokky.dev/favorites`)
-
-    items.value = items.value.map((item) => {
-      const favorite = favorites.find((favorite) => favorite.item_id === item.id)
-
-      if (!favorite) {
-        return item
-      }
-
-      return {
-        ...item,
-        isFavorite: true,
-        favoriteId: favorite.id
-      }
-    })
-  } catch (err) {
-    console.log(err)
-  }
-}
-
+// Загрузка товаров
 const fetchItems = async () => {
   try {
-    const params = {
-      sortBy: filters.sortBy
-    }
-
-    if (filters.searchQuery) {
-      params.title = `*${filters.searchQuery}*`
-    }
-
-    const { data } = await axios.get(`https://604781a0efa572c1.mokky.dev/items`, {
-      params
-    })
-
-    items.value = data.map((obj) => ({
-      ...obj,
-      isFavorite: false,
-      favoriteId: null,
-      isAdded: false
-    }))
+    const { data } = await axios.get('/data/goods.json');
+    items.value = data;
   } catch (err) {
-    console.log(err)
+    console.error('Ошибка загрузки товаров:', err);
   }
-}
+};
 
-onMounted(async () => {
-  const localCart = localStorage.getItem('cart')
-  cart.value = localCart ? JSON.parse(localCart) : []
+const initItems = () => {
+  try {
+    const localCart = JSON.parse(localStorage.getItem('cart')) || [];
+    if (localCart.length) {
+      items.value = items.value.map(item => ({
+        ...item,
+        isAdded: localCart.some(localItem => localItem.id === item.id),
+      }));
+    }
+    isInit.value = true;
+  } catch (error) {
+    console.error('Ошибка инициализации корзины:', error);
+  }
+};
 
-  await fetchItems()
-  await fetchFavorites()
+const filteredItems = computed(() => {
+  return items.value.filter(item =>
+    item.title.toLowerCase().trim().includes(filters.searchQuery.toLowerCase().trim())
+  );
+});
 
-  items.value = items.value.map((item) => ({
-    ...item,
-    isAdded: cart.value.some((cartItem) => cartItem.id === item.id)
-  }))
-})
+const onChangeSearchInput = debounce((event) => {
+  filters.searchQuery = event.target.value;
+}, 500);
 
-watch(cart, () => {
-  items.value = items.value.map((item) => ({
-    ...item,
-    isAdded: false
-  }))
-})
+const saveCartToLocalStorage = () => {
+  try {
+    localStorage.setItem('cart', JSON.stringify(cart.value));
+  } catch (error) {
+    console.error('Ошибка сохранения корзины:', error);
+  }
+};
 
-watch(filters, fetchItems)
+onMounted(() => {
+  fetchItems();
+});
+
+watch(items, () => {
+  if (!isInit.value) {
+    initItems();
+  } else {
+    cart.value = items.value.filter(item => item.isAdded);
+    saveCartToLocalStorage();
+  }
+}, { deep: true });
+
 </script>
 
 <template>
-  <div class="lg:flex lg:justify-between lg:items-center">
+  <div class="md:flex md:justify-between md:items-center">
     <h2 class="text-3xl font-bold mb-4">Вся техника</h2>
 
-    <div class="md:flex md:gap-4">
-      <select @change="onChangeSelect" class="w-full py-2 px-3 mb-3 border rounded-md outline-none">
-        <option value="name">По названию</option>
-        <option value="price">По цене (дешевые)</option>
-        <option value="-price">По цене (дорогие)</option>
-      </select>
-
+    <div>
       <div class="relative">
         <img class="absolute left-4 top-3" src="/search.svg" />
         <input
@@ -146,6 +91,6 @@ watch(filters, fetchItems)
   </div>
 
   <div class="mt-10">
-    <CardList :items="items" @add-to-favorite="addToFavorite" @add-to-cart="onClickAddPlus" />
+    <CardList :items="filteredItems" @add-to-cart="toggleAddToCart" />
   </div>
 </template>
