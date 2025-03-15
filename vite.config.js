@@ -6,7 +6,9 @@ import vueJsx from '@vitejs/plugin-vue-jsx'
 export default defineConfig({
   plugins: [vue(), vueJsx()],
   base: process.env.NODE_ENV === 'production' ? '/estore' : '/',
-  build: {
-    minify: false // Отключает минификацию
+  resolve: {
+    alias: {
+      '@': '/src' // Пример алиаса для путей
+    }
   }
 })
